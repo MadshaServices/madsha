@@ -5,9 +5,20 @@ import { useRouter } from "next/navigation";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ email: "", otp: "", password: "" });
+  const [form, setForm] = useState({
+    email: "",
+    otp: "",
+    password: ""
+  });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,17 +35,17 @@ export default function ResetPasswordPage() {
           newPassword: form.password
         })
       });
-      
+
       const data = await res.json();
-      
+
       if (data.success) {
-        setMessage("✅ Password reset! Redirecting...");
+        setMessage("✅ Password reset successful! Redirecting...");
         setTimeout(() => router.push("/login/user"), 2000);
       } else {
-        setMessage(data.error || "❌ Failed");
+        setMessage(data.error || "❌ Failed to reset password");
       }
-    } catch (err) {
-      setMessage("❌ Server error");
+    } catch (error) {
+      setMessage("❌ Connection error");
     } finally {
       setLoading(false);
     }
@@ -42,42 +53,56 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-orange-500 to-pink-500">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl w-96">
+      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-2xl w-96">
         <h2 className="text-2xl font-bold text-center mb-6">Reset Password</h2>
-        
-        {message && <p className="text-center mb-4 p-2 bg-gray-100 rounded">{message}</p>}
-        
-        <input
-          type="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={(e) => setForm({...form, email: e.target.value})}
-          className="w-full p-3 border rounded-lg mb-3"
-          required
-        />
-        <input
-          type="text"
-          placeholder="OTP"
-          value={form.otp}
-          onChange={(e) => setForm({...form, otp: e.target.value})}
-          className="w-full p-3 border rounded-lg mb-3"
-          required
-        />
-        <input
-          type="password"
-          placeholder="New Password"
-          value={form.password}
-          onChange={(e) => setForm({...form, password: e.target.value})}
-          className="w-full p-3 border rounded-lg mb-4"
-          required
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-orange-500 text-white py-3 rounded-lg hover:bg-orange-600"
-        >
-          {loading ? "Please wait..." : "Reset Password"}
-        </button>
+
+        {message && (
+          <div className={`mb-4 p-3 rounded-lg text-center ${
+            message.includes('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'
+          }`}>
+            {message}
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={form.email}
+            onChange={handleChange}
+            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            required
+            disabled={loading}
+          />
+          <input
+            type="text"
+            name="otp"
+            placeholder="OTP"
+            value={form.otp}
+            onChange={handleChange}
+            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            required
+            disabled={loading}
+          />
+          <input
+            type="password"
+            name="password"
+            placeholder="New Password"
+            value={form.password}
+            onChange={handleChange}
+            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            required
+            disabled={loading}
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-orange-500 to-pink-500 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50"
+          >
+            {loading ? "Please wait..." : "Reset Password"}
+          </button>
+        </div>
       </form>
     </div>
   );
