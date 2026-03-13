@@ -1,6 +1,8 @@
-// lib/db-helpers.ts
+// lib/db-helpers.ts - Complete fixed version
+
 import dbConnect from './db';
 import { Conversation, Feedback, Query, Analytics } from './schemas';
+import mongoose from 'mongoose';
 
 // Save conversation to database
 export async function saveConversation(data: {
@@ -14,7 +16,11 @@ export async function saveConversation(data: {
   
   try {
     const conversation = new Conversation({
-      ...data,
+      sessionId: data.sessionId,
+      userMessage: data.userMessage,
+      botResponse: data.botResponse,
+      topic: data.topic || 'general',
+      page: data.page,
       timestamp: new Date()
     });
     await conversation.save();
@@ -63,26 +69,32 @@ export async function saveFeedback(data: {
   
   try {
     const feedback = new Feedback({
-      ...data,
+      conversationId: data.conversationId,
+      messageId: data.messageId,
+      helpful: data.helpful,
+      comment: data.comment,
       timestamp: new Date()
     });
     await feedback.save();
 
-    // Update conversation with feedback
-    await Conversation.updateOne(
-      { sessionId: data.conversationId },
-      { 
-        $set: { 
-          helpful: data.helpful,
-          needsReview: !data.helpful,
-          reviewReason: data.comment 
-        } 
-      }
-    );
-
-    // Update query satisfaction stats
-    const conversation = await Conversation.findOne({ sessionId: data.conversationId });
+    // ✅ FIXED: Find conversation by sessionId
+    const conversation = await Conversation.findOne({ 
+      sessionId: data.conversationId 
+    });
+    
     if (conversation) {
+      await Conversation.updateOne(
+        { sessionId: data.conversationId },
+        { 
+          $set: { 
+            helpful: data.helpful,
+            needsReview: !data.helpful,
+            reviewReason: data.comment 
+          } 
+        }
+      );
+
+      // Update query satisfaction stats
       await Query.updateOne(
         { query: conversation.userMessage.toLowerCase().trim() },
         {
