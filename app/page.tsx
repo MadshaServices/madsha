@@ -9,6 +9,7 @@ import { Swiper, SwiperSlide } from "swiper/react"
 import { Autoplay } from "swiper/modules"
 import "swiper/css"
 import { Facebook, Instagram, Twitter, Linkedin } from "lucide-react"
+import Footer from "@/components/Footer";  // ✅ Footer import
 
 /* ================= STATIC DATA ================= */
 
@@ -441,89 +442,7 @@ export default function Home() {
       </div>
       
       {/* ================= FOOTER ================= */}
-
-<footer className="mt-20 bg-gradient-to-br from-gray-900 via-gray-800 to-black text-gray-300">
-  <div className="max-w-7xl mx-auto px-6 py-16 grid grid-cols-1 md:grid-cols-4 gap-10">
-
-    {/* BRAND */}
-    <div>
-      <div className="relative w-[160px] h-[60px] mb-4">
-        <Image
-          src="/logo.png"
-          alt="Madsha Logo"
-          fill
-          className="object-contain brightness-0 invert"
-        />
-      </div>
-      <p className="text-sm text-gray-400 leading-relaxed mb-6">
-        MADSHA connects you with trusted local shops near you.
-        Fast delivery, genuine products and the best local deals —
-        all in one place.
-      </p>
-
-      {/* SOCIAL ICONS */}
-      <div className="flex gap-4">
-        <a href="#" className="p-2 bg-gray-800 rounded-full hover:bg-blue-600 transition">
-          <Facebook size={18} />
-        </a>
-        <a href="#" className="p-2 bg-gray-800 rounded-full hover:bg-pink-600 transition">
-          <Instagram size={18} />
-        </a>
-        <a href="#" className="p-2 bg-gray-800 rounded-full hover:bg-sky-500 transition">
-          <Twitter size={18} />
-        </a>
-        <a href="#" className="p-2 bg-gray-800 rounded-full hover:bg-blue-700 transition">
-          <Linkedin size={18} />
-        </a>
-      </div>
-    </div>
-
-    {/* QUICK LINKS */}
-    <div>
-      <h3 className="text-white font-semibold mb-4">Quick Links</h3>
-      <ul className="space-y-3 text-sm">
-        <li><Link href="/" className="hover:text-white transition">Home</Link></li>
-        <li><Link href="/about" className="hover:text-white transition">About Us</Link></li>
-        <li><Link href="/our-promise" className="hover:text-white transition">Our Promise</Link></li>
-        <li><Link href="/why-madsha" className="hover:text-white transition">Why Madsha</Link></li>
-        <li><Link href="/contact" className="hover:text-white transition">Contact</Link></li>
-      </ul>
-    </div>
-
-    {/* LEGAL */}
-    <div>
-      <h3 className="text-white font-semibold mb-4">Legal</h3>
-      <ul className="space-y-3 text-sm">
-        <li><Link href="/privacy-policy" className="hover:text-white transition">Privacy Policy</Link></li>
-        <li><Link href="/terms-and-conditions" className="hover:text-white transition">Terms & Conditions</Link></li>
-      </ul>
-    </div>
-
-    {/* CONTACT INFO */}
-    <div>
-      <h3 className="text-white font-semibold mb-4">Contact</h3>
-      <p className="text-sm text-gray-400 mb-2">📍 Malda, West Bengal, India</p>
-      <p className="text-sm text-gray-400 mb-2">📞 +91 8900646865</p>
-      <p className="text-sm text-gray-400 mb-4">✉ support@madsha.com</p>
-      <p className="text-sm text-gray-500">Delivering in Minutes 🚀</p>
-    </div>
-  </div>
-
-  {/* BOTTOM BAR */}
-  <div className="border-t border-gray-700">
-    <div className="max-w-7xl mx-auto px-6 py-6 text-center text-sm text-gray-500">
-      {/* Secret Admin Link (only visible on hover) */}
-      <Link 
-        href="/login/admin" 
-        className="opacity-30 hover:opacity-100 transition inline-block mb-2"
-        title="Admin Access"
-      >
-        ⚡
-      </Link>
-      <p>© {new Date().getFullYear()} Madsha Services Private Limited. All rights reserved.</p>
-    </div>
-  </div>
-</footer>
+      <Footer />  {/* ✅ Footer component yahan call ho raha hai */}
     </div>
   )
 }

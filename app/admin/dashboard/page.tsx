@@ -11,6 +11,7 @@ import {
   RefreshCw, ChevronDown, Settings, Bell,
   Home, LogOut, User, Star, AlertTriangle
 } from "lucide-react";
+import TomAnalyticsWidget from "@/components/admin/TomAnalyticsWidget";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -139,7 +140,7 @@ export default function AdminDashboard() {
     await handleApprove(email);
   };
 
-  // ✅ UPDATED DELETE FUNCTION
+  // UPDATED DELETE FUNCTION
   const handleDelete = async (email: string) => {
     if (!confirm("⚠️ Are you sure you want to permanently delete this user? This action cannot be undone!")) return;
     
@@ -265,6 +266,21 @@ export default function AdminDashboard() {
                     <div>
                       <p className="font-medium text-gray-700">Settings</p>
                       <p className="text-xs text-gray-500">Admin preferences</p>
+                    </div>
+                  </Link>
+
+                  {/* TOM'S ANALYTICS LINK - ADDED HERE */}
+                  <Link href="/admin/analytics" className="flex items-center gap-3 px-4 py-3 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition group">
+                    <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
+                        <path d="M21 12v-2a5 5 0 0 0-5-5H8a5 5 0 0 0-5 5v2" />
+                        <circle cx="12" cy="16" r="5" />
+                        <path d="m12 11 1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-700">Tom's Analytics</p>
+                      <p className="text-xs text-gray-500">AI learning insights</p>
                     </div>
                   </Link>
 
@@ -396,6 +412,11 @@ export default function AdminDashboard() {
               <button className="mt-3 text-xs text-red-600 hover:underline">Manage Blocks →</button>
             </div>
           </div>
+        </div>
+
+        {/* ===== TOM'S ANALYTICS WIDGET - ADDED HERE ===== */}
+        <div className="mb-8">
+          <TomAnalyticsWidget />
         </div>
 
         {/* Search and Filter Bar */}
