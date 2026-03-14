@@ -10,33 +10,22 @@ const app = express();
 // ==================== MIDDLEWARE ====================
 app.use(express.json());
 
-// ✅ FIXED: More flexible CORS configuration
+// ✅ FIXED: Simple CORS configuration - no regex patterns
 const allowedOrigins = [
   'https://madsha.vercel.app',
   'http://localhost:3000',
-  'https://madsha-api.onrender.com',
-  /\.vercel\.app$/,     // All Vercel subdomains
-  /\.onrender\.com$/,   // All Render subdomains
-  /^https?:\/\/.*\.vercel\.app$/,
-  /^https?:\/\/.*\.onrender\.com$/
+  'https://madsha-api.onrender.com'
 ];
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, etc)
+    // Allow requests with no origin (like mobile apps, curl, postman)
     if (!origin) return callback(null, true);
     
-    // Check if origin matches allowed patterns
-    const allowed = allowedOrigins.some(pattern => {
-      if (pattern instanceof RegExp) {
-        return pattern.test(origin);
-      }
-      return pattern === origin;
-    });
-    
-    if (allowed) {
+    if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
+      console.log('❌ Blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -47,8 +36,17 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 
-// ✅ Handle preflight requests
-app.options('*', cors());
+// ✅ Handle preflight requests - fixed version
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
 
 // ✅ Request logging middleware
 app.use((req, res, next) => {
@@ -85,7 +83,6 @@ const client = new MongoClient(process.env.MONGODB_URI, {
   retryWrites: true,
   retryReads: true
 });
-
 let db;
 
 // Email configuration
@@ -133,7 +130,7 @@ async function connectDB() {
       }
     }
     
-    // Create categories collection
+    // ✅ Create categories collection
     if (!collectionNames.includes("categories")) {
       await db.createCollection("categories");
       console.log("✅ Categories collection created");
