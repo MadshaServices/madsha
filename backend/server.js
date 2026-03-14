@@ -1,3 +1,4 @@
+// backend/server.js
 const express = require("express");
 const { MongoClient } = require("mongodb");
 const cors = require("cors");
@@ -5,15 +6,38 @@ const nodemailer = require("nodemailer");
 require("dotenv").config();
 
 const app = express();
+
+// ==================== MIDDLEWARE ====================
 app.use(express.json());
-app.use(cors());
 
-console.log("PORT from env:", process.env.PORT);
-console.log("MONGODB_URI from env:", process.env.MONGODB_URI);
-console.log("EMAIL_USER from env:", process.env.EMAIL_USER);
-console.log("EMAIL_PASS from env:", process.env.EMAIL_PASS ? "✅ Set" : "❌ Not set");
+// ✅ CORS updated for production
+app.use(cors({
+  origin: ['https://madsha.vercel.app', 'http://localhost:3000', 'https://madsha-api.onrender.com'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-const client = new MongoClient(process.env.MONGODB_URI);
+// ✅ Request logging middleware
+app.use((req, res, next) => {
+  console.log(`\n📨 ${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
+// ==================== ENVIRONMENT VARIABLES CHECK ====================
+console.log("\n🚀 ===== SERVER STARTING =====");
+console.log("📦 Environment:", process.env.NODE_ENV || 'development');
+console.log("🔌 PORT from env:", process.env.PORT);
+console.log("📊 MONGODB_URI exists:", !!process.env.MONGODB_URI);
+console.log("📧 EMAIL_USER exists:", !!process.env.EMAIL_USER);
+console.log("🔑 EMAIL_PASS exists:", !!process.env.EMAIL_PASS);
+console.log("===========================\n");
+
+// ==================== MONGODB CONNECTION ====================
+const client = new MongoClient(process.env.MONGODB_URI, {
+  connectTimeoutMS: 10000,
+  socketTimeoutMS: 45000,
+});
 let db;
 
 // Email configuration
@@ -32,36 +56,82 @@ async function connectDB() {
   try {
     await client.connect();
     db = client.db("madsha");
-    console.log("✅ MongoDB Connected");
+    console.log("✅ MongoDB Connected Successfully");
     
-    // Create collections
-    await db.createCollection("users");
-    await db.createCollection("admins");
-    console.log("✅ Collections ready");
+    // Create collections if they don't exist
+    const collections = await db.listCollections().toArray();
+    const collectionNames = collections.map(c => c.name);
     
-    // Create default admin if not exists
-    const adminExists = await db.collection("admins").findOne({ email: "admin@madsha.com" });
-    if (!adminExists) {
-      await db.collection("admins").insertOne({
-        email: "admin@madsha.com",
-        password: "Admin@123",
-        name: "Super Admin",
-        role: "admin",
-        createdAt: new Date()
-      });
-      console.log("✅ Default admin created");
+    if (!collectionNames.includes("users")) {
+      await db.createCollection("users");
+      console.log("✅ Users collection created");
     }
+    
+    if (!collectionNames.includes("admins")) {
+      await db.createCollection("admins");
+      console.log("✅ Admins collection created");
+      
+      // Create default admin if not exists
+      const adminExists = await db.collection("admins").findOne({ email: "admin@madsha.com" });
+      if (!adminExists) {
+        await db.collection("admins").insertOne({
+          email: "admin@madsha.com",
+          password: "Admin@123",
+          name: "Super Admin",
+          role: "admin",
+          createdAt: new Date()
+        });
+        console.log("✅ Default admin created - Email: admin@madsha.com, Password: Admin@123");
+      }
+    }
+    
+    console.log("✅ Database ready with collections:", collectionNames);
     
   } catch (error) {
     console.error("❌ MongoDB connection error:", error);
+    console.log("⏳ Retrying in 5 seconds...");
+    setTimeout(connectDB, 5000);
   }
 }
 
 connectDB();
 
-// Test route
+// ==================== TEST ROUTES ====================
+
+// Root route
 app.get("/", (req, res) => {
-  res.send("Backend Running");
+  res.send(`
+    <html>
+      <head><title>MADSHA Backend</title></head>
+      <body style="font-family: Arial; text-align: center; padding: 50px;">
+        <h1 style="color: #f97316;">🚀 MADSHA Backend Running</h1>
+        <p>Server is live and ready!</p>
+        <p>✅ MongoDB Connected</p>
+        <p>✅ API Routes Active</p>
+        <hr>
+        <p style="color: #666;">Available endpoints:</p>
+        <ul style="list-style: none; padding: 0;">
+          <li>📊 GET /api/admin/users/stats</li>
+          <li>👥 GET /api/admin/users/all</li>
+          <li>🔑 POST /api/login/admin</li>
+          <li>📝 POST /api/register/:role</li>
+          <li>✅ POST /api/admin/users/approve</li>
+          <li>❌ POST /api/admin/users/reject</li>
+          <li>🗑️ DELETE /api/admin/users/delete/:email</li>
+        </ul>
+      </body>
+    </html>
+  `);
+});
+
+// Test route
+app.get("/api/test", (req, res) => {
+  res.json({ 
+    success: true, 
+    message: "API is working!",
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV
+  });
 });
 
 // ==================== OTP GENERATOR ====================
@@ -80,7 +150,7 @@ app.post("/api/send-otp", async (req, res) => {
   try {
     // Generate OTP
     const otp = generateOTP();
-    const expiry = Date.now() + 30 * 1000; // ✅ 30 SECONDS
+    const expiry = Date.now() + 30 * 1000; // 30 SECONDS
     
     // Store OTP
     otpStore.set(email, { otp, expiry });
@@ -191,7 +261,7 @@ app.post("/api/forgot-password", async (req, res) => {
 
     // Generate OTP
     const otp = generateOTP();
-    const expiry = Date.now() + 30 * 1000; // ✅ 30 SECONDS
+    const expiry = Date.now() + 30 * 1000; // 30 SECONDS
     
     otpStore.set(`reset_${email}`, { otp, expiry });
 
@@ -403,29 +473,32 @@ app.post("/api/login/:role", async (req, res) => {
 
 // ==================== ADMIN: GET ALL USERS ====================
 app.get("/api/admin/users/all", async (req, res) => {
+  console.log("📋 Fetching all users...");
   try {
     const users = await db.collection("users")
       .find({})
       .project({ password: 0 })
       .toArray();
     
+    console.log(`✅ Found ${users.length} users`);
     res.json({ success: true, users });
   } catch (error) {
-    console.error("Error fetching users:", error);
+    console.error("❌ Error fetching users:", error);
     res.status(500).json({ error: "Something went wrong" });
   }
 });
 
 // ==================== ADMIN: GET USER STATS ====================
 app.get("/api/admin/users/stats", async (req, res) => {
+  console.log("📊 Fetching user stats...");
   try {
     const allUsers = await db.collection("users").find({}).toArray();
     
     const stats = {
       total: allUsers.length,
-      approved: allUsers.filter(u => u.status === "approved").length,
+      active: allUsers.filter(u => u.status === "approved").length,
       pending: allUsers.filter(u => u.status === "pending").length,
-      rejected: allUsers.filter(u => u.status === "rejected").length,
+      blocked: allUsers.filter(u => u.status === "rejected").length,
       users: allUsers.filter(u => u.role === "user").length,
       riders: allUsers.filter(u => u.role === "rider").length,
       businesses: allUsers.filter(u => u.role === "business").length
@@ -434,7 +507,7 @@ app.get("/api/admin/users/stats", async (req, res) => {
     console.log("📊 User Stats:", stats);
     res.json({ success: true, stats });
   } catch (error) {
-    console.error("Error fetching stats:", error);
+    console.error("❌ Error fetching stats:", error);
     res.status(500).json({ error: "Something went wrong" });
   }
 });
@@ -462,7 +535,7 @@ app.get("/api/admin/users/pending", async (req, res) => {
       rejected: rejected || [] 
     });
   } catch (error) {
-    console.error("Error fetching users:", error);
+    console.error("❌ Error fetching users:", error);
     res.status(500).json({ error: "Something went wrong" });
   }
 });
@@ -470,14 +543,17 @@ app.get("/api/admin/users/pending", async (req, res) => {
 // ==================== ADMIN: APPROVE USER ====================
 app.post("/api/admin/users/approve", async (req, res) => {
   const { email, approvedBy } = req.body;
+  console.log(`✅ Approving user: ${email} by ${approvedBy}`);
+  
   try {
     await db.collection("users").updateOne(
       { email },
       { $set: { status: "approved", approvedBy, approvedAt: new Date() } }
     );
+    console.log(`✅ User approved: ${email}`);
     res.json({ success: true });
   } catch (error) {
-    console.error("Approve error:", error);
+    console.error("❌ Approve error:", error);
     res.status(500).json({ error: "Something went wrong" });
   }
 });
@@ -485,14 +561,17 @@ app.post("/api/admin/users/approve", async (req, res) => {
 // ==================== ADMIN: REJECT USER ====================
 app.post("/api/admin/users/reject", async (req, res) => {
   const { email, reason } = req.body;
+  console.log(`❌ Rejecting user: ${email} - Reason: ${reason}`);
+  
   try {
     await db.collection("users").updateOne(
       { email },
       { $set: { status: "rejected", rejectionReason: reason, rejectedAt: new Date() } }
     );
+    console.log(`✅ User rejected: ${email}`);
     res.json({ success: true });
   } catch (error) {
-    console.error("Reject error:", error);
+    console.error("❌ Reject error:", error);
     res.status(500).json({ error: "Something went wrong" });
   }
 });
@@ -500,6 +579,7 @@ app.post("/api/admin/users/reject", async (req, res) => {
 // ==================== ADMIN: DELETE USER ====================
 app.delete("/api/admin/users/delete/:email", async (req, res) => {
   const { email } = req.params;
+  console.log(`🗑️ Deleting user: ${email}`);
   
   try {
     const user = await db.collection("users").findOne({ email });
@@ -547,7 +627,52 @@ app.get("/api/dashboard/business/:email", async (req, res) => {
   }
 });
 
-const PORT = parseInt(process.env.PORT) || 5000;
-app.listen(PORT, () => {
-  console.log(`\n🚀 Server running on port ${PORT}`);
+// ==================== 404 HANDLER ====================
+app.use((req, res) => {
+  console.log(`❌ 404 - Route not found: ${req.method} ${req.url}`);
+  res.status(404).json({ 
+    error: "Route not found", 
+    method: req.method,
+    path: req.url,
+    message: "The requested API endpoint does not exist"
+  });
+});
+
+// ==================== ERROR HANDLER ====================
+app.use((err, req, res, next) => {
+  console.error("❌ Server error:", err);
+  res.status(500).json({ 
+    error: "Internal server error",
+    message: err.message 
+  });
+});
+
+// ==================== START SERVER ====================
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log("\n" + "=".repeat(50));
+  console.log(`🚀 SERVER STARTED SUCCESSFULLY`);
+  console.log("=".repeat(50));
+  console.log(`🌍 URL: https://madsha-api.onrender.com`);
+  console.log(`🔌 Port: ${PORT}`);
+  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log("\n📋 Registered Routes:");
+  console.log("   ✅ GET  /");
+  console.log("   ✅ GET  /api/test");
+  console.log("   ✅ POST /api/login/admin");
+  console.log("   ✅ GET  /api/admin/users/stats");
+  console.log("   ✅ GET  /api/admin/users/all");
+  console.log("   ✅ GET  /api/admin/users/pending");
+  console.log("   ✅ POST /api/admin/users/approve");
+  console.log("   ✅ POST /api/admin/users/reject");
+  console.log("   ✅ DELETE /api/admin/users/delete/:email");
+  console.log("   ✅ POST /api/register/:role");
+  console.log("   ✅ POST /api/login/:role");
+  console.log("   ✅ POST /api/send-otp");
+  console.log("   ✅ POST /api/verify-otp");
+  console.log("   ✅ POST /api/forgot-password");
+  console.log("   ✅ POST /api/reset-password");
+  console.log("   ✅ GET  /api/dashboard/rider/:email");
+  console.log("   ✅ GET  /api/dashboard/business/:email");
+  console.log("=".repeat(50) + "\n");
 });
