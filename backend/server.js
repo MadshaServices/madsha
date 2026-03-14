@@ -10,17 +10,59 @@ const app = express();
 // ==================== MIDDLEWARE ====================
 app.use(express.json());
 
-// ✅ CORS updated for production
+// ✅ FIXED: More flexible CORS configuration
+const allowedOrigins = [
+  'https://madsha.vercel.app',
+  'http://localhost:3000',
+  'https://madsha-api.onrender.com',
+  /\.vercel\.app$/,     // All Vercel subdomains
+  /\.onrender\.com$/,   // All Render subdomains
+  /^https?:\/\/.*\.vercel\.app$/,
+  /^https?:\/\/.*\.onrender\.com$/
+];
+
 app.use(cors({
-  origin: ['https://madsha.vercel.app', 'http://localhost:3000', 'https://madsha-api.onrender.com'],
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin matches allowed patterns
+    const allowed = allowedOrigins.some(pattern => {
+      if (pattern instanceof RegExp) {
+        return pattern.test(origin);
+      }
+      return pattern === origin;
+    });
+    
+    if (allowed) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  optionsSuccessStatus: 200
 }));
+
+// ✅ Handle preflight requests
+app.options('*', cors());
 
 // ✅ Request logging middleware
 app.use((req, res, next) => {
   console.log(`\n📨 ${new Date().toISOString()} - ${req.method} ${req.url}`);
+  console.log(`   Origin: ${req.headers.origin || 'No origin'}`);
+  console.log(`   User-Agent: ${req.headers['user-agent']}`);
+  next();
+});
+
+// ✅ Security headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
   next();
 });
 
@@ -35,9 +77,15 @@ console.log("===========================\n");
 
 // ==================== MONGODB CONNECTION ====================
 const client = new MongoClient(process.env.MONGODB_URI, {
-  connectTimeoutMS: 10000,
+  connectTimeoutMS: 30000,
   socketTimeoutMS: 45000,
+  serverSelectionTimeoutMS: 30000,
+  tls: true,
+  tlsAllowInvalidCertificates: true,
+  retryWrites: true,
+  retryReads: true
 });
+
 let db;
 
 // Email configuration
@@ -85,7 +133,7 @@ async function connectDB() {
       }
     }
     
-    // ✅ NEW: Create categories collection
+    // Create categories collection
     if (!collectionNames.includes("categories")) {
       await db.createCollection("categories");
       console.log("✅ Categories collection created");
@@ -397,6 +445,7 @@ app.post("/api/login/admin", async (req, res) => {
   console.log("\n🔍 ===== ADMIN LOGIN ATTEMPT =====");
   console.log("📧 Email:", email);
   console.log("🔑 Password:", password);
+  console.log("🌐 Origin:", req.headers.origin);
 
   try {
     if (!db) {
@@ -422,6 +471,11 @@ app.post("/api/login/admin", async (req, res) => {
     }
 
     console.log("✅ Admin login successful!");
+    
+    // Set CORS headers explicitly for this response
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    
     res.json({
       success: true,
       admin: {
@@ -729,7 +783,7 @@ app.get("/api/categories", async (req, res) => {
   }
 });
 
-// Get single category by slug or ID - THIS IS THE ONE YOU NEED
+// Get single category by slug or ID
 app.get("/api/categories/:identifier", async (req, res) => {
   console.log(`📁 Fetching category: ${req.params.identifier}`);
   try {
