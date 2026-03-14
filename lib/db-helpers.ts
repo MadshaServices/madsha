@@ -1,8 +1,6 @@
-// lib/db-helpers.ts - Complete fixed version
-
+// lib/db-helpers.ts
 import dbConnect from './db';
 import { Conversation, Feedback, Query, Analytics } from './schemas';
-import mongoose from 'mongoose';
 
 // Save conversation to database
 export async function saveConversation(data: {
@@ -26,19 +24,19 @@ export async function saveConversation(data: {
     await conversation.save();
 
     // Update query analytics
-    await Query.updateOne(
+    await Query.findOneAndUpdate(
       { query: data.userMessage.toLowerCase().trim() },
       {
         $inc: { count: 1 },
         $set: { lastAsked: new Date() },
         $addToSet: { topics: data.topic || 'general' }
       },
-      { upsert: true }
-    );
+      { upsert: true, new: true }
+    ).lean();
 
     // Update daily analytics
     const today = new Date().toISOString().split('T')[0];
-    await Analytics.updateOne(
+    await Analytics.findOneAndUpdate(
       { date: today },
       {
         $inc: { 
@@ -48,8 +46,8 @@ export async function saveConversation(data: {
         },
         $set: { lastUpdated: new Date() }
       },
-      { upsert: true }
-    );
+      { upsert: true, new: true }
+    ).lean();
 
     return conversation;
   } catch (error) {
@@ -77,13 +75,13 @@ export async function saveFeedback(data: {
     });
     await feedback.save();
 
-    // ✅ FIXED: Find conversation by sessionId
-    const conversation = await Conversation.findOne({ 
+    // Find conversation by sessionId - using type assertion for TypeScript
+    const conversation = await (Conversation as any).findOne({ 
       sessionId: data.conversationId 
-    });
+    }).lean();
     
     if (conversation) {
-      await Conversation.updateOne(
+      await (Conversation as any).updateOne(
         { sessionId: data.conversationId },
         { 
           $set: { 
@@ -94,8 +92,7 @@ export async function saveFeedback(data: {
         }
       );
 
-      // Update query satisfaction stats
-      await Query.updateOne(
+      await (Query as any).updateOne(
         { query: conversation.userMessage.toLowerCase().trim() },
         {
           $inc: data.helpful ? { satisfactory: 1 } : { unsatisfactory: 1 }
@@ -126,7 +123,9 @@ export async function getAnalytics(days: number = 7) {
         { $limit: 10 },
         { $project: { query: 1, count: 1, satisfactory: 1, unsatisfactory: 1 } }
       ]),
-      Analytics.find({ date: { $gte: startDate.toISOString().split('T')[0] } }).sort({ date: -1 })
+      Analytics.find({ date: { $gte: startDate.toISOString().split('T')[0] } })
+        .sort({ date: -1 })
+        .lean()
     ]);
 
     // Calculate success rate
@@ -143,7 +142,7 @@ export async function getAnalytics(days: number = 7) {
       totalConversations,
       needsReview,
       successRate,
-      topQueries: topQueries.map(q => ({
+      topQueries: topQueries.map((q: any) => ({
         query: q.query,
         count: q.count,
         satisfaction: q.satisfactory + q.unsatisfactory > 0 
@@ -165,16 +164,20 @@ export async function trackUser(sessionId: string) {
   
   try {
     const today = new Date().toISOString().split('T')[0];
-    const exists = await Conversation.findOne({ 
-      sessionId, 
+    const startOfDay = new Date(today);
+    const endOfDay = new Date(today + 'T23:59:59.999Z');
+
+    // Use type assertion for TypeScript
+    const exists = await (Conversation as any).findOne({ 
+      sessionId,
       timestamp: { 
-        $gte: new Date(today), 
-        $lt: new Date(today + 'T23:59:59.999Z') 
-      } 
-    });
+        $gte: startOfDay,
+        $lte: endOfDay
+      }
+    }).lean();
 
     if (!exists) {
-      await Analytics.updateOne(
+      await (Analytics as any).updateOne(
         { date: today },
         { $inc: { uniqueUsers: 1 } },
         { upsert: true }

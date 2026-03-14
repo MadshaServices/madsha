@@ -1,4 +1,6 @@
 // app/api/chat/route.ts
+import { google } from '@ai-sdk/google';
+import { streamText } from 'ai';
 import { NextResponse } from 'next/server';
 
 export const maxDuration = 30;
@@ -47,7 +49,7 @@ IMPORTANT RULES:
 - Keep responses under 3-4 sentences
 - Use emojis occasionally 😊`;
 
-    // Format messages for Gemini API correctly
+    // Format messages for Gemini API
     const contents = [
       ...messages.map((m: any) => ({
         role: m.role === 'assistant' ? 'model' : 'user',
@@ -57,7 +59,7 @@ IMPORTANT RULES:
 
     console.log('📤 Sending to Gemini...');
 
-    // Call Gemini API with correct format
+    // Call Gemini API
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
@@ -82,26 +84,13 @@ IMPORTANT RULES:
       const errorText = await response.text();
       console.error('❌ Gemini API error:', response.status, errorText);
       
-      // Try to parse error
-      try {
-        const errorData = JSON.parse(errorText);
-        return NextResponse.json(
-          { 
-            error: 'Gemini API error',
-            message: 'Sorry, I encountered an error. Please try again.',
-            details: errorData
-          }, 
-          { status: 500 }
-        );
-      } catch {
-        return NextResponse.json(
-          { 
-            error: 'Gemini API error',
-            message: 'Sorry, I encountered an error. Please try again.'
-          }, 
-          { status: 500 }
-        );
-      }
+      return NextResponse.json(
+        { 
+          error: 'Gemini API error',
+          message: 'Sorry, I encountered an error. Please try again.'
+        }, 
+        { status: 500 }
+      );
     }
 
     const data = await response.json();
