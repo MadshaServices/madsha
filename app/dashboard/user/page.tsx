@@ -39,7 +39,7 @@ export default function UserDashboard() {
         }
 
         // Backend se profile fetch kar
-        const response = await fetch(`http://localhost:5000/api/user/profile?email=${userEmail}`)
+        const response = await fetch(`${API_URL}/api/user/profile?email=${userEmail}`);
         const data = await response.json()
 
         if (data.success) {

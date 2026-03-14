@@ -12,6 +12,7 @@ type Props = {
 export default function RegisterForm({ role }: Props) {
   const router = useRouter()
   const [step, setStep] = useState<"form" | "otp">("form")
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
   const [form, setForm] = useState({
     name: "",
     email: "",

@@ -48,7 +48,7 @@ export default function BusinessDashboard() {
         setBusiness(parsed);
 
         // Fetch real data from backend
-        const response = await fetch(`http://localhost:5000/api/dashboard/business/${parsed.email}`);
+        const response = await fetch(`${API_URL}/api/dashboard/business/${parsed.email}`);
         const data = await response.json();
 
         if (data.success) {

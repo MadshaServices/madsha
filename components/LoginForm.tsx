@@ -6,6 +6,7 @@ import { Lock, Unlock, Mail } from "lucide-react";
 import OtpModal from "./OtpVerification";
 
 export default function LoginPage({ role = "user" }: { role?: string }) {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

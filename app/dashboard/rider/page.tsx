@@ -31,7 +31,7 @@ export default function RiderDashboard() {
         setRider(parsed);
 
         // Fetch real data from backend
-        const response = await fetch(`http://localhost:5000/api/dashboard/rider/${parsed.email}`);
+        const response = await fetch(`${API_URL}/api/dashboard/rider/${parsed.email}`);
         const data = await response.json();
 
         if (data.success) {
