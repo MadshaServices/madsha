@@ -7,15 +7,6 @@ require("dotenv").config();
 
 const app = express();
 
-// backend/server.js - CORS section (lines 10-35)
-const express = require("express");
-const { MongoClient } = require("mongodb");
-const cors = require("cors");
-const nodemailer = require("nodemailer");
-require("dotenv").config();
-
-const app = express();
-
 // ==================== MIDDLEWARE ====================
 app.use(express.json());
 
