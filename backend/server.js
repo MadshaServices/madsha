@@ -10,7 +10,7 @@ const app = express();
 // ==================== MIDDLEWARE ====================
 app.use(express.json());
 
-// ✅ SIMPLE CORS
+// ✅ SIMPLE CORS - No complex patterns
 const allowedOrigins = [
   'https://madsha.vercel.app',
   'http://localhost:3000',
@@ -19,10 +19,13 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, postman)
     if (!origin) return callback(null, true);
+    
     if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
+      callback(null, origin);
     } else {
+      console.log('❌ Blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -31,9 +34,19 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
 }));
 
-// ✅ Request logging
+// ✅ Request logging middleware
 app.use((req, res, next) => {
   console.log(`\n📨 ${new Date().toISOString()} - ${req.method} ${req.url}`);
+  console.log(`   Origin: ${req.headers.origin || 'No origin'}`);
+  console.log(`   User-Agent: ${req.headers['user-agent']}`);
+  next();
+});
+
+// ✅ Security headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
   next();
 });
 
@@ -103,7 +116,7 @@ async function connectDB() {
       }
     }
     
-    // ✅ Create categories collection
+    // Create categories collection
     if (!collectionNames.includes("categories")) {
       await db.createCollection("categories");
       console.log("✅ Categories collection created");
@@ -441,10 +454,6 @@ app.post("/api/login/admin", async (req, res) => {
     }
 
     console.log("✅ Admin login successful!");
-    
-    // Set CORS headers explicitly for this response
-    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
     
     res.json({
       success: true,
