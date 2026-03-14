@@ -7,10 +7,19 @@ require("dotenv").config();
 
 const app = express();
 
+// backend/server.js - CORS section (lines 10-35)
+const express = require("express");
+const { MongoClient } = require("mongodb");
+const cors = require("cors");
+const nodemailer = require("nodemailer");
+require("dotenv").config();
+
+const app = express();
+
 // ==================== MIDDLEWARE ====================
 app.use(express.json());
 
-// ✅ FIXED: Simple CORS configuration - no regex patterns
+// ✅ SIMPLE CORS - No complex patterns, no regex
 const allowedOrigins = [
   'https://madsha.vercel.app',
   'http://localhost:3000',
@@ -35,6 +44,24 @@ app.use(cors({
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
   optionsSuccessStatus: 200
 }));
+
+// ❌ REMOVED app.options('*', ...) - CORS middleware automatically handles preflight
+
+// ✅ Request logging middleware
+app.use((req, res, next) => {
+  console.log(`\n📨 ${new Date().toISOString()} - ${req.method} ${req.url}`);
+  console.log(`   Origin: ${req.headers.origin || 'No origin'}`);
+  console.log(`   User-Agent: ${req.headers['user-agent']}`);
+  next();
+});
+
+// ✅ Security headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
 
 // ✅ Handle preflight requests - fixed version
 app.options('*', (req, res) => {
