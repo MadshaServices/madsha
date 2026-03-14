@@ -13,6 +13,7 @@ app.use(express.json());
 // ✅ SIMPLE CORS - No complex patterns
 const allowedOrigins = [
   'https://madsha.vercel.app',
+  'https://www.madsha.com',
   'http://localhost:3000',
   'https://madsha-api.onrender.com'
 ];
