@@ -679,7 +679,7 @@ app.get("/api/dashboard/business/:email", async (req, res) => {
 
 // Get all categories (with optional filters)
 app.get("/api/categories", async (req, res) => {
-  console.log("📁 Fetching categories...");
+  console.log("📁 Fetching all categories...");
   try {
     const { search, parent, active, limit = 50, page = 1 } = req.query;
     
@@ -729,7 +729,7 @@ app.get("/api/categories", async (req, res) => {
   }
 });
 
-// Get single category by slug or ID
+// Get single category by slug or ID - THIS IS THE ONE YOU NEED
 app.get("/api/categories/:identifier", async (req, res) => {
   console.log(`📁 Fetching category: ${req.params.identifier}`);
   try {
@@ -789,7 +789,7 @@ app.get("/api/categories/hierarchy", async (req, res) => {
   }
 });
 
-// Get farmer products
+// ==================== FARMER PRODUCTS API ====================
 app.get("/api/farmer/products", async (req, res) => {
   console.log("🌾 Fetching farmer products...");
   try {
