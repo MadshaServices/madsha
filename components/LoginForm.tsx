@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Unlock, Mail } from "lucide-react";
+import Link from "next/link";
+import { Lock, Unlock, Mail, Eye, EyeOff } from "lucide-react";
 import OtpModal from "./OtpVerification";
 
 export default function LoginPage({ role = "user" }: { role?: string }) {
@@ -10,6 +11,7 @@ export default function LoginPage({ role = "user" }: { role?: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [otpModal, setOtpModal] = useState(false);
   const [otpType, setOtpType] = useState<"login" | "forgot">("login");
   const [unlocked, setUnlocked] = useState(false);
@@ -27,7 +29,7 @@ export default function LoginPage({ role = "user" }: { role?: string }) {
     setError("");
 
     try {
-      const response = await fetch(`http://localhost:5000/api/login/${role}`, {
+      const response = await fetch(`${API_URL}/api/login/${role}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -68,7 +70,7 @@ export default function LoginPage({ role = "user" }: { role?: string }) {
 
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:5000/api/send-otp", {
+      const response = await fetch(`${API_URL}/api/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email })
@@ -95,13 +97,14 @@ export default function LoginPage({ role = "user" }: { role?: string }) {
       setError("Please enter your email");
       return;
     }
-    setOtpType("forgot");
-    handleSendOTP();
+    
+    // Directly redirect to forgot password page
+    router.push(`/forgot-password?email=${encodeURIComponent(email)}`);
   };
 
   const handleVerifyOTP = async (otp: string) => {
     try {
-      const response = await fetch("http://localhost:5000/api/verify-otp", {
+      const response = await fetch(`${API_URL}/api/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp })
@@ -112,10 +115,10 @@ export default function LoginPage({ role = "user" }: { role?: string }) {
       if (data.success) {
         setOtpModal(false);
         if (otpType === "login") {
-          // Auto-fill or proceed with login
-          alert("OTP verified! You can now login with password.");
+          // For OTP login, we need to auto-login or show success
+          alert("OTP verified! Please login with password.");
         } else {
-          // Redirect to reset password page
+          // For forgot password, redirect to reset page
           router.push(`/reset-password?email=${encodeURIComponent(email)}`);
         }
       } else {
@@ -137,9 +140,12 @@ export default function LoginPage({ role = "user" }: { role?: string }) {
               Login to access your {role} dashboard. 
               Secure OTP verification available.
             </p>
-            <button className="border px-6 py-3 rounded-lg hover:bg-white hover:text-black transition">
-              Learn More
-            </button>
+            <Link 
+              href="/forgot-password"
+              className="border w-fit px-6 py-3 rounded-lg hover:bg-white hover:text-black transition"
+            >
+              Forgot Password?
+            </Link>
           </div>
 
           {/* RIGHT SIDE */}
@@ -175,14 +181,23 @@ export default function LoginPage({ role = "user" }: { role?: string }) {
                 disabled={loading}
               />
 
-              <input
-                type="password"
-                placeholder="Password"
-                className="w-full p-3 rounded-md mb-3 outline-none"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-              />
+              <div className="relative mb-3">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  className="w-full p-3 rounded-md outline-none pr-12"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-gray-500"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
 
               <div className="flex justify-between text-sm text-white mb-5">
                 <label className="flex items-center gap-1">
@@ -229,6 +244,15 @@ export default function LoginPage({ role = "user" }: { role?: string }) {
                   Register here
                 </button>
               </p>
+
+              <div className="mt-4 text-center">
+                <Link 
+                  href="/" 
+                  className="text-white/70 text-sm hover:text-white transition"
+                >
+                  ← Back to Home
+                </Link>
+              </div>
             </div>
           </div>
         </div>

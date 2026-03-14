@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Mail, Lock, User, Phone, KeyRound } from "lucide-react"
+import Link from "next/link"
+import { Mail, Lock, User, Phone, KeyRound, Eye, EyeOff, ArrowLeft } from "lucide-react"
 import OtpVerification from "./OtpVerification";
 
 type Props = {
@@ -18,10 +19,12 @@ export default function RegisterForm({ role }: Props) {
     email: "",
     phone: "",
     password: "",
+    confirmPassword: ""
   })
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [otp, setOtp] = useState(["", "", "", "", "", ""])
-  // 🔥 FIX 1: Changed from 600 to 30 seconds
-  const [timeLeft, setTimeLeft] = useState(30) // 30 seconds
+  const [timeLeft, setTimeLeft] = useState(30)
   const [canResend, setCanResend] = useState(false)
   const [errors, setErrors] = useState<any>({})
   const [loading, setLoading] = useState(false)
@@ -30,11 +33,12 @@ export default function RegisterForm({ role }: Props) {
   const validate = () => {
     const newErrors: any = {}
 
-    if (!form.name) newErrors.name = "Name is required"
+    if (!form.name.trim()) newErrors.name = "Name is required"
     if (!form.email.includes("@")) newErrors.email = "Valid email required"
-    if (form.phone.length < 10) newErrors.phone = "Valid phone required"
-    if (form.password.length < 6)
-      newErrors.password = "Password must be 6+ characters"
+    if (!form.phone.trim()) newErrors.phone = "Phone number is required"
+    if (form.phone.length < 10) newErrors.phone = "Valid 10-digit phone required"
+    if (form.password.length < 6) newErrors.password = "Password must be 6+ characters"
+    if (form.password !== form.confirmPassword) newErrors.confirmPassword = "Passwords do not match"
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -48,7 +52,7 @@ export default function RegisterForm({ role }: Props) {
     setApiMessage(null)
 
     try {
-      const response = await fetch("http://localhost:5000/api/send-otp", {
+      const response = await fetch(`${API_URL}/api/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: form.email })
@@ -58,7 +62,6 @@ export default function RegisterForm({ role }: Props) {
 
       if (data.success) {
         setStep("otp")
-        // 🔥 FIX 2: Reset timer to 30 seconds
         setTimeLeft(30)
         setCanResend(false)
         setApiMessage({
@@ -109,7 +112,7 @@ export default function RegisterForm({ role }: Props) {
 
     try {
       // First verify OTP
-      const verifyResponse = await fetch("http://localhost:5000/api/verify-otp", {
+      const verifyResponse = await fetch(`${API_URL}/api/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: form.email, otp: otpString })
@@ -126,7 +129,7 @@ export default function RegisterForm({ role }: Props) {
       }
 
       // OTP verified, now register
-      const registerResponse = await fetch(`http://localhost:5000/api/register/${role}`, {
+      const registerResponse = await fetch(`${API_URL}/api/register/${role}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -167,7 +170,7 @@ export default function RegisterForm({ role }: Props) {
   const handleResendOTP = async () => {
     setLoading(true)
     try {
-      const response = await fetch("http://localhost:5000/api/send-otp", {
+      const response = await fetch(`${API_URL}/api/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: form.email })
@@ -176,7 +179,6 @@ export default function RegisterForm({ role }: Props) {
       const data = await response.json()
 
       if (data.success) {
-        // 🔥 FIX 3: Reset timer to 30 seconds on resend
         setTimeLeft(30)
         setCanResend(false)
         setApiMessage({
@@ -208,26 +210,30 @@ export default function RegisterForm({ role }: Props) {
   }
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
-    // 🔥 FIX: Better formatting for seconds less than 60
-    if (seconds < 60) {
-      return `0:${secs.toString().padStart(2, "0")}`
-    }
-    return `${mins}:${secs.toString().padStart(2, "0")}`
+    return `0:${secs.toString().padStart(2, "0")}`
   }
 
   // Registration Form
   if (step === "form") {
     return (
-      <div className="relative w-[380px]">
-        <div className="absolute inset-0 rounded-3xl p-[2px] bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-spin-slow blur-sm opacity-80"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-orange-500 to-pink-500 p-4">
+        <div className="w-[420px] bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl">
+          
+          {/* Back Button */}
+          <Link href="/" className="inline-flex items-center gap-2 text-white/70 hover:text-white mb-6">
+            <ArrowLeft size={18} />
+            Back to Home
+          </Link>
 
-        <div className="relative backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl rounded-3xl p-8 text-white transition duration-500 hover:scale-105 hover:shadow-blue-500/40">
-
-          <h2 className="text-2xl font-bold mb-6 text-center capitalize">
-            {role} Registration
-          </h2>
+          <div className="text-center mb-6">
+            <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <User size={40} className="text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-white capitalize">
+              {role} Registration
+            </h2>
+          </div>
 
           {apiMessage && (
             <div className={`mb-4 p-3 rounded-xl text-center ${
@@ -238,52 +244,98 @@ export default function RegisterForm({ role }: Props) {
           )}
 
           <div className="space-y-4">
+            {/* Name Field */}
             <div>
-              <input
-                type="text"
-                placeholder="Full Name"
-                className="w-full p-3 rounded-xl bg-white/20 border border-white/30 placeholder-white text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                disabled={loading}
-              />
-              {errors.name && <p className="text-red-400 text-sm mt-1">{errors.name}</p>}
+              <div className="relative">
+                <User size={18} className="absolute left-3 top-3.5 text-white/50" />
+                <input
+                  type="text"
+                  placeholder="Full Name"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/20 border border-white/30 placeholder-white/70 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  disabled={loading}
+                />
+              </div>
+              {errors.name && <p className="text-red-300 text-sm mt-1">{errors.name}</p>}
             </div>
 
+            {/* Email Field */}
             <div>
-              <input
-                type="email"
-                placeholder="Email"
-                className="w-full p-3 rounded-xl bg-white/20 border border-white/30 placeholder-white text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                disabled={loading}
-              />
-              {errors.email && <p className="text-red-400 text-sm mt-1">{errors.email}</p>}
+              <div className="relative">
+                <Mail size={18} className="absolute left-3 top-3.5 text-white/50" />
+                <input
+                  type="email"
+                  placeholder="Email Address"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/20 border border-white/30 placeholder-white/70 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  disabled={loading}
+                />
+              </div>
+              {errors.email && <p className="text-red-300 text-sm mt-1">{errors.email}</p>}
             </div>
 
+            {/* Phone Field */}
             <div>
-              <input
-                type="tel"
-                placeholder="Phone"
-                className="w-full p-3 rounded-xl bg-white/20 border border-white/30 placeholder-white text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                disabled={loading}
-              />
-              {errors.phone && <p className="text-red-400 text-sm mt-1">{errors.phone}</p>}
+              <div className="relative">
+                <Phone size={18} className="absolute left-3 top-3.5 text-white/50" />
+                <input
+                  type="tel"
+                  placeholder="Phone Number"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/20 border border-white/30 placeholder-white/70 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  disabled={loading}
+                />
+              </div>
+              {errors.phone && <p className="text-red-300 text-sm mt-1">{errors.phone}</p>}
             </div>
 
+            {/* Password Field */}
             <div>
-              <input
-                type="password"
-                placeholder="Password"
-                className="w-full p-3 rounded-xl bg-white/20 border border-white/30 placeholder-white text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                disabled={loading}
-              />
-              {errors.password && <p className="text-red-400 text-sm mt-1">{errors.password}</p>}
+              <div className="relative">
+                <Lock size={18} className="absolute left-3 top-3.5 text-white/50" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  className="w-full pl-10 pr-12 py-3 rounded-xl bg-white/20 border border-white/30 placeholder-white/70 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-white/50 hover:text-white"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              {errors.password && <p className="text-red-300 text-sm mt-1">{errors.password}</p>}
+            </div>
+
+            {/* Confirm Password Field */}
+            <div>
+              <div className="relative">
+                <Lock size={18} className="absolute left-3 top-3.5 text-white/50" />
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Confirm Password"
+                  className="w-full pl-10 pr-12 py-3 rounded-xl bg-white/20 border border-white/30 placeholder-white/70 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                  value={form.confirmPassword}
+                  onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-3 text-white/50 hover:text-white"
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              {errors.confirmPassword && <p className="text-red-300 text-sm mt-1">{errors.confirmPassword}</p>}
             </div>
 
             <button 
@@ -298,12 +350,12 @@ export default function RegisterForm({ role }: Props) {
 
             <p className="text-white text-sm text-center mt-4">
               Already have an account?{" "}
-              <button
-                onClick={() => router.push(`/login/${role}`)}
+              <Link
+                href={`/login/${role}`}
                 className="text-orange-200 hover:underline"
               >
-                Login
-              </button>
+                Login here
+              </Link>
             </p>
           </div>
         </div>
@@ -313,16 +365,23 @@ export default function RegisterForm({ role }: Props) {
 
   // OTP Verification Step
   return (
-    <div className="relative w-[380px]">
-      <div className="absolute inset-0 rounded-3xl p-[2px] bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-spin-slow blur-sm opacity-80"></div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-orange-500 to-pink-500 p-4">
+      <div className="w-[400px] bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl">
 
-      <div className="relative backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl rounded-3xl p-8 text-white">
+        {/* Back Button to Form */}
+        <button
+          onClick={() => setStep("form")}
+          className="inline-flex items-center gap-2 text-white/70 hover:text-white mb-6"
+        >
+          <ArrowLeft size={18} />
+          Back to Registration
+        </button>
 
         <div className="text-center mb-6">
           <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <KeyRound size={40} className="text-white" />
           </div>
-          <h2 className="text-2xl font-bold">Verify OTP</h2>
+          <h2 className="text-2xl font-bold text-white">Verify OTP</h2>
           <p className="text-gray-300 text-sm mt-2">
             We've sent a code to {form.email}
           </p>
@@ -380,5 +439,5 @@ export default function RegisterForm({ role }: Props) {
         )}
       </div>
     </div>
-  )
+  );
 }
