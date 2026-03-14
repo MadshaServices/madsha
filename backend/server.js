@@ -19,7 +19,7 @@ const app = express();
 // ==================== MIDDLEWARE ====================
 app.use(express.json());
 
-// ✅ SIMPLE CORS - No complex patterns, no regex
+// ✅ SIMPLE CORS
 const allowedOrigins = [
   'https://madsha.vercel.app',
   'http://localhost:3000',
@@ -28,66 +28,21 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, postman)
     if (!origin) return callback(null, true);
-    
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      console.log('❌ Blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  optionsSuccessStatus: 200
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
 }));
 
-// ❌ REMOVED app.options('*', ...) - CORS middleware automatically handles preflight
-
-// ✅ Request logging middleware
+// ✅ Request logging
 app.use((req, res, next) => {
   console.log(`\n📨 ${new Date().toISOString()} - ${req.method} ${req.url}`);
-  console.log(`   Origin: ${req.headers.origin || 'No origin'}`);
-  console.log(`   User-Agent: ${req.headers['user-agent']}`);
-  next();
-});
-
-// ✅ Security headers
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  next();
-});
-
-// ✅ Handle preflight requests - fixed version
-app.options('*', (req, res) => {
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.sendStatus(200);
-});
-
-// ✅ Request logging middleware
-app.use((req, res, next) => {
-  console.log(`\n📨 ${new Date().toISOString()} - ${req.method} ${req.url}`);
-  console.log(`   Origin: ${req.headers.origin || 'No origin'}`);
-  console.log(`   User-Agent: ${req.headers['user-agent']}`);
-  next();
-});
-
-// ✅ Security headers
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
   next();
 });
 
