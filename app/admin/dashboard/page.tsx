@@ -37,6 +37,9 @@ export default function AdminDashboard() {
     users: 0
   });
 
+  // ✅ API URL with environment variable
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
   useEffect(() => {
     const adminData = localStorage.getItem('admin');
     if (!adminData) {
@@ -51,12 +54,12 @@ export default function AdminDashboard() {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      // Fetch stats first
-      const statsResponse = await fetch('http://localhost:5000/api/admin/users/stats');
+      // Fetch stats first - using API_URL
+      const statsResponse = await fetch(`${API_URL}/api/admin/users/stats`);
       const statsData = await statsResponse.json();
       
-      // Fetch all users
-      const usersResponse = await fetch('http://localhost:5000/api/admin/users/all');
+      // Fetch all users - using API_URL
+      const usersResponse = await fetch(`${API_URL}/api/admin/users/all`);
       const usersData = await usersResponse.json();
       
       if (statsData.success) {
@@ -90,7 +93,7 @@ export default function AdminDashboard() {
   const handleApprove = async (email: string) => {
     setActionLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/admin/users/approve', {
+      const response = await fetch(`${API_URL}/api/admin/users/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, approvedBy: admin?.email })
@@ -113,7 +116,7 @@ export default function AdminDashboard() {
 
     setActionLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/admin/users/reject', {
+      const response = await fetch(`${API_URL}/api/admin/users/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, reason: rejectionReason })
@@ -146,7 +149,7 @@ export default function AdminDashboard() {
     
     setActionLoading(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/users/delete/${email}`, {
+      const response = await fetch(`${API_URL}/api/admin/users/delete/${email}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -269,7 +272,7 @@ export default function AdminDashboard() {
                     </div>
                   </Link>
 
-                  {/* TOM'S ANALYTICS LINK - ADDED HERE */}
+                  {/* TOM'S ANALYTICS LINK */}
                   <Link href="/admin/analytics" className="flex items-center gap-3 px-4 py-3 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition group">
                     <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
@@ -414,7 +417,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* ===== TOM'S ANALYTICS WIDGET - ADDED HERE ===== */}
+        {/* ===== TOM'S ANALYTICS WIDGET ===== */}
         <div className="mb-8">
           <TomAnalyticsWidget />
         </div>
