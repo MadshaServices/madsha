@@ -85,6 +85,52 @@ async function connectDB() {
       }
     }
     
+    // ✅ NEW: Create categories collection
+    if (!collectionNames.includes("categories")) {
+      await db.createCollection("categories");
+      console.log("✅ Categories collection created");
+      
+      // Insert default categories
+      const defaultCategories = [
+        // Main Categories
+        { name: "Fashion", slug: "fashion", description: "Clothing, footwear & accessories", icon: "👕", order: 1, isActive: true, parentCategory: null, createdAt: new Date() },
+        { name: "Electronics", slug: "electronics", description: "Mobiles, laptops, gadgets", icon: "💻", order: 2, isActive: true, parentCategory: null, createdAt: new Date() },
+        { name: "Home & Kitchen", slug: "home-kitchen", description: "Furniture, decor, kitchenware", icon: "🏠", order: 3, isActive: true, parentCategory: null, createdAt: new Date() },
+        { name: "Beauty", slug: "beauty", description: "Makeup, skincare, haircare", icon: "💄", order: 4, isActive: true, parentCategory: null, createdAt: new Date() },
+        { name: "Grocery", slug: "grocery", description: "Daily essentials, staples", icon: "🛒", order: 5, isActive: true, parentCategory: null, createdAt: new Date() },
+        { name: "Sports", slug: "sports", description: "Fitness, outdoor sports", icon: "⚽", order: 6, isActive: true, parentCategory: null, createdAt: new Date() },
+        { name: "Books", slug: "books", description: "Books, stationery", icon: "📚", order: 7, isActive: true, parentCategory: null, createdAt: new Date() },
+        { name: "Toys", slug: "toys", description: "Toys, baby care", icon: "🧸", order: 8, isActive: true, parentCategory: null, createdAt: new Date() },
+        { name: "Automotive", slug: "automotive", description: "Car & bike accessories", icon: "🚗", order: 9, isActive: true, parentCategory: null, createdAt: new Date() },
+        { name: "Health", slug: "health", description: "Healthcare, medicines", icon: "💊", order: 10, isActive: true, parentCategory: null, createdAt: new Date() },
+        { name: "Jewellery", slug: "jewellery", description: "Gold, silver, imitation", icon: "💎", order: 11, isActive: true, parentCategory: null, createdAt: new Date() },
+        
+        // Farmer/Kisan Special Category
+        { name: "Kisan Store", slug: "farmer", description: "Fresh from farms - Direct from farmers", icon: "🌾", order: 0, isActive: true, parentCategory: null, isFarmer: true, createdAt: new Date() },
+        
+        // Subcategories for Fashion
+        { name: "Men's Clothing", slug: "mens-clothing", parentCategory: "fashion", icon: "👔", order: 1, isActive: true, createdAt: new Date() },
+        { name: "Women's Clothing", slug: "womens-clothing", parentCategory: "fashion", icon: "👗", order: 2, isActive: true, createdAt: new Date() },
+        { name: "Kids' Clothing", slug: "kids-clothing", parentCategory: "fashion", icon: "🧥", order: 3, isActive: true, createdAt: new Date() },
+        { name: "Footwear", slug: "footwear", parentCategory: "fashion", icon: "👟", order: 4, isActive: true, createdAt: new Date() },
+        
+        // Subcategories for Electronics
+        { name: "Mobiles", slug: "mobiles", parentCategory: "electronics", icon: "📱", order: 1, isActive: true, createdAt: new Date() },
+        { name: "Laptops", slug: "laptops", parentCategory: "electronics", icon: "💻", order: 2, isActive: true, createdAt: new Date() },
+        { name: "Audio", slug: "audio", parentCategory: "electronics", icon: "🎧", order: 3, isActive: true, createdAt: new Date() },
+        { name: "Cameras", slug: "cameras", parentCategory: "electronics", icon: "📷", order: 4, isActive: true, createdAt: new Date() },
+        
+        // Subcategories for Grocery
+        { name: "Fresh Vegetables", slug: "vegetables", parentCategory: "grocery", icon: "🥬", order: 1, isActive: true, isFarmerProduct: true, createdAt: new Date() },
+        { name: "Fresh Fruits", slug: "fruits", parentCategory: "grocery", icon: "🍎", order: 2, isActive: true, isFarmerProduct: true, createdAt: new Date() },
+        { name: "Organic Products", slug: "organic", parentCategory: "grocery", icon: "🌱", order: 3, isActive: true, isFarmerProduct: true, createdAt: new Date() },
+        { name: "Staples", slug: "staples", parentCategory: "grocery", icon: "🍚", order: 4, isActive: true, createdAt: new Date() },
+      ];
+      
+      await db.collection("categories").insertMany(defaultCategories);
+      console.log("✅ Default categories inserted");
+    }
+    
     console.log("✅ Database ready with collections:", collectionNames);
     
   } catch (error) {
@@ -118,6 +164,8 @@ app.get("/", (req, res) => {
           <li>✅ POST /api/admin/users/approve</li>
           <li>❌ POST /api/admin/users/reject</li>
           <li>🗑️ DELETE /api/admin/users/delete/:email</li>
+          <li>📁 GET /api/categories</li>
+          <li>🌾 GET /api/farmer/products</li>
         </ul>
       </body>
     </html>
@@ -627,6 +675,277 @@ app.get("/api/dashboard/business/:email", async (req, res) => {
   }
 });
 
+// ==================== CATEGORY APIS ====================
+
+// Get all categories (with optional filters)
+app.get("/api/categories", async (req, res) => {
+  console.log("📁 Fetching categories...");
+  try {
+    const { search, parent, active, limit = 50, page = 1 } = req.query;
+    
+    let query = {};
+    
+    // Search filter
+    if (search) {
+      query.name = { $regex: search, $options: 'i' };
+    }
+    
+    // Parent category filter
+    if (parent === 'null') {
+      query.parentCategory = null;
+    } else if (parent) {
+      query.parentCategory = parent;
+    }
+    
+    // Active status filter
+    if (active !== undefined) {
+      query.isActive = active === 'true';
+    }
+    
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const categories = await db.collection("categories")
+      .find(query)
+      .sort({ order: 1, name: 1 })
+      .limit(parseInt(limit))
+      .skip(skip)
+      .toArray();
+    
+    const total = await db.collection("categories").countDocuments(query);
+    
+    res.json({
+      success: true,
+      categories,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error("❌ Error fetching categories:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get single category by slug or ID
+app.get("/api/categories/:identifier", async (req, res) => {
+  console.log(`📁 Fetching category: ${req.params.identifier}`);
+  try {
+    const { identifier } = req.params;
+    
+    let query = {};
+    
+    // Check if identifier is MongoDB ObjectId
+    if (identifier.match(/^[0-9a-fA-F]{24}$/)) {
+      query = { _id: identifier };
+    } else {
+      query = { slug: identifier };
+    }
+    
+    const category = await db.collection("categories").findOne(query);
+    
+    if (!category) {
+      return res.status(404).json({ success: false, error: "Category not found" });
+    }
+    
+    res.json({ success: true, category });
+  } catch (error) {
+    console.error("❌ Error fetching category:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get categories with hierarchy (main + sub)
+app.get("/api/categories/hierarchy", async (req, res) => {
+  console.log("📁 Fetching category hierarchy...");
+  try {
+    // Get all main categories (parent = null)
+    const mainCategories = await db.collection("categories")
+      .find({ parentCategory: null })
+      .sort({ order: 1 })
+      .toArray();
+    
+    // For each main category, get its subcategories
+    const categoriesWithSub = await Promise.all(
+      mainCategories.map(async (cat) => {
+        const subCategories = await db.collection("categories")
+          .find({ parentCategory: cat.slug })
+          .sort({ order: 1 })
+          .toArray();
+        
+        return {
+          ...cat,
+          subCategories
+        };
+      })
+    );
+    
+    res.json({ success: true, categories: categoriesWithSub });
+  } catch (error) {
+    console.error("❌ Error fetching hierarchy:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get farmer products
+app.get("/api/farmer/products", async (req, res) => {
+  console.log("🌾 Fetching farmer products...");
+  try {
+    const { type, location } = req.query;
+    
+    let query = { 
+      $or: [
+        { isFarmerProduct: true },
+        { category: "farmer" },
+        { parentCategory: "farmer" }
+      ]
+    };
+    
+    if (type) query.productType = type;
+    if (location) query.farmLocation = location;
+    
+    // Sample products (you can replace with actual products collection)
+    const products = [
+      { id: 1, name: "Fresh Tomatoes", price: 40, unit: "kg", farmer: "Ramesh Kumar", location: "Malda", image: "🍅", freshness: "Today", organic: true },
+      { id: 2, name: "Organic Potatoes", price: 30, unit: "kg", farmer: "Suresh Singh", location: "Malda", image: "🥔", freshness: "Today", organic: true },
+      { id: 3, name: "Fresh Spinach", price: 20, unit: "bunch", farmer: "Priya Devi", location: "Malda", image: "🥬", freshness: "Today", organic: true },
+      { id: 4, name: "Farm Fresh Eggs", price: 80, unit: "dozen", farmer: "Mohan Das", location: "Malda", image: "🥚", freshness: "Today", organic: false },
+      { id: 5, name: "Organic Mangoes", price: 120, unit: "kg", farmer: "Lakhan Singh", location: "Malda", image: "🥭", freshness: "Seasonal", organic: true },
+      { id: 6, name: "Fresh Milk", price: 60, unit: "liter", farmer: "Gopal Yadav", location: "Malda", image: "🥛", freshness: "Today", organic: false },
+    ];
+    
+    res.json({
+      success: true,
+      products,
+      message: "🌾 Fresh from farm! Direct from farmers"
+    });
+  } catch (error) {
+    console.error("❌ Error fetching farmer products:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ==================== ADMIN: CREATE CATEGORY ====================
+app.post("/api/admin/categories", async (req, res) => {
+  console.log("📁 Creating new category...");
+  try {
+    const { name, description, icon, parentCategory, order, isActive, isFarmer } = req.body;
+    
+    // Generate slug from name
+    const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    
+    // Check if category exists
+    const existing = await db.collection("categories").findOne({ 
+      $or: [
+        { name },
+        { slug }
+      ]
+    });
+    
+    if (existing) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Category with this name already exists" 
+      });
+    }
+    
+    const category = {
+      name,
+      slug,
+      description: description || "",
+      icon: icon || "📦",
+      parentCategory: parentCategory || null,
+      order: order || 0,
+      isActive: isActive !== undefined ? isActive : true,
+      isFarmer: isFarmer || false,
+      createdAt: new Date()
+    };
+    
+    await db.collection("categories").insertOne(category);
+    
+    res.json({ 
+      success: true, 
+      message: "Category created successfully",
+      category 
+    });
+  } catch (error) {
+    console.error("❌ Error creating category:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ==================== ADMIN: UPDATE CATEGORY ====================
+app.put("/api/admin/categories/:id", async (req, res) => {
+  console.log(`📁 Updating category: ${req.params.id}`);
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    
+    // If name is updated, update slug too
+    if (updates.name) {
+      updates.slug = updates.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    }
+    
+    updates.updatedAt = new Date();
+    
+    const result = await db.collection("categories").updateOne(
+      { _id: id },
+      { $set: updates }
+    );
+    
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, error: "Category not found" });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: "Category updated successfully"
+    });
+  } catch (error) {
+    console.error("❌ Error updating category:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ==================== ADMIN: DELETE CATEGORY ====================
+app.delete("/api/admin/categories/:id", async (req, res) => {
+  console.log(`📁 Deleting category: ${req.params.id}`);
+  try {
+    const { id } = req.params;
+    
+    // Check if category has subcategories
+    const category = await db.collection("categories").findOne({ _id: id });
+    
+    if (!category) {
+      return res.status(404).json({ success: false, error: "Category not found" });
+    }
+    
+    // Check if it has subcategories
+    const subCategories = await db.collection("categories")
+      .find({ parentCategory: category.slug })
+      .toArray();
+    
+    if (subCategories.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Cannot delete category with subcategories. Delete subcategories first." 
+      });
+    }
+    
+    const result = await db.collection("categories").deleteOne({ _id: id });
+    
+    res.json({ 
+      success: true, 
+      message: "Category deleted successfully" 
+    });
+  } catch (error) {
+    console.error("❌ Error deleting category:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ==================== 404 HANDLER ====================
 app.use((req, res) => {
   console.log(`❌ 404 - Route not found: ${req.method} ${req.url}`);
@@ -674,5 +993,12 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log("   ✅ POST /api/reset-password");
   console.log("   ✅ GET  /api/dashboard/rider/:email");
   console.log("   ✅ GET  /api/dashboard/business/:email");
+  console.log("   ✅ GET  /api/categories");
+  console.log("   ✅ GET  /api/categories/hierarchy");
+  console.log("   ✅ GET  /api/categories/:identifier");
+  console.log("   ✅ GET  /api/farmer/products");
+  console.log("   ✅ POST /api/admin/categories");
+  console.log("   ✅ PUT  /api/admin/categories/:id");
+  console.log("   ✅ DELETE /api/admin/categories/:id");
   console.log("=".repeat(50) + "\n");
 });
