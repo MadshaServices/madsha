@@ -28,8 +28,8 @@ export default function CategoryPage() {
   const [maxDistance, setMaxDistance] = useState<number>(10);
   const [showLocalOnly, setShowLocalOnly] = useState<boolean>(false);
 
-  // ✅ API URL with fallback
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://madsha-backend.onrender.com';
+  // ✅ API URL with fallback - FIXED to madsha-api
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://madsha-api.onrender.com';
 
   useEffect(() => {
     if (slug) {
@@ -44,11 +44,11 @@ export default function CategoryPage() {
       console.log('📁 Fetching category:', slug);
       console.log('🔗 API URL:', API_URL);
       
-      // ✅ Fetch main category
+      // ✅ Fetch main category - using backticks
       const catRes = await fetch(`${API_URL}/api/categories/${slug}`);
       
       if (!catRes.ok) {
-        throw new Error(`Category not found ${catRes.status}`);
+        throw new Error(`Category not found (${catRes.status})`);
       }
       
       const catData = await catRes.json();

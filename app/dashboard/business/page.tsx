@@ -16,6 +16,9 @@ export default function BusinessDashboard() {
   const [business, setBusiness] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
+  // ✅ ADD API_URL constant
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+  
   // Real data states
   const [stats, setStats] = useState({
     totalProducts: 0,
@@ -47,14 +50,19 @@ export default function BusinessDashboard() {
         
         setBusiness(parsed);
 
-        // Fetch real data from backend
+        // Fetch real data from backend - using API_URL
         const response = await fetch(`${API_URL}/api/dashboard/business/${parsed.email}`);
         const data = await response.json();
 
         if (data.success) {
-          setStats(data.stats);
-          setRecentOrders(data.recentOrders);
-          setTopProducts(data.topProducts);
+          setStats(data.stats || {
+            totalProducts: 0,
+            todayOrders: 0,
+            pendingOrders: 0,
+            revenue: 0
+          });
+          setRecentOrders(data.recentOrders || []);
+          setTopProducts(data.topProducts || []);
         }
       } catch (e) {
         console.error("Error fetching data:", e);
@@ -64,7 +72,7 @@ export default function BusinessDashboard() {
     };
 
     fetchData();
-  }, [router]);
+  }, [router, API_URL]);
 
   const handleLogout = () => {
     localStorage.removeItem('user');
@@ -390,27 +398,35 @@ export default function BusinessDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {recentOrders.map((order: any, index: number) => (
-                      <tr key={index} className="border-b border-gray-50 hover:bg-gray-50/50 transition group">
-                        <td className="py-4 text-sm font-medium text-gray-800">{order.id}</td>
-                        <td className="py-4">
-                          <div>
-                            <p className="text-sm font-medium text-gray-800">{order.customer}</p>
-                            <p className="text-xs text-gray-400">{order.items || 1} items</p>
-                          </div>
-                        </td>
-                        <td className="py-4 text-sm text-gray-600">{order.product}</td>
-                        <td className="py-4 text-sm font-semibold text-gray-800">
-                          {typeof order.amount === 'number' ? formatCurrency(order.amount) : order.amount}
-                        </td>
-                        <td className="py-4">{getStatusBadge(order.status)}</td>
-                        <td className="py-4">
-                          <button className="text-gray-400 hover:text-orange-500 transition group-hover:translate-x-1">
-                            <Eye size={18} />
-                          </button>
+                    {recentOrders.length > 0 ? (
+                      recentOrders.map((order: any, index: number) => (
+                        <tr key={index} className="border-b border-gray-50 hover:bg-gray-50/50 transition group">
+                          <td className="py-4 text-sm font-medium text-gray-800">{order.id}</td>
+                          <td className="py-4">
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">{order.customer}</p>
+                              <p className="text-xs text-gray-400">{order.items || 1} items</p>
+                            </div>
+                          </td>
+                          <td className="py-4 text-sm text-gray-600">{order.product}</td>
+                          <td className="py-4 text-sm font-semibold text-gray-800">
+                            {typeof order.amount === 'number' ? formatCurrency(order.amount) : order.amount}
+                          </td>
+                          <td className="py-4">{getStatusBadge(order.status)}</td>
+                          <td className="py-4">
+                            <button className="text-gray-400 hover:text-orange-500 transition group-hover:translate-x-1">
+                              <Eye size={18} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-gray-400">
+                          No recent orders found
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -429,30 +445,36 @@ export default function BusinessDashboard() {
               </div>
               
               <div className="space-y-4">
-                {topProducts.map((product: any, index: number) => (
-                  <div key={index} className="group cursor-pointer">
-                    <div className="flex justify-between items-center mb-1">
-                      <p className="text-sm font-medium text-gray-800 group-hover:text-orange-500 transition">
-                        {product.name}
-                      </p>
-                      <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                        {product.trend || "+12%"}
-                      </span>
+                {topProducts.length > 0 ? (
+                  topProducts.map((product: any, index: number) => (
+                    <div key={index} className="group cursor-pointer">
+                      <div className="flex justify-between items-center mb-1">
+                        <p className="text-sm font-medium text-gray-800 group-hover:text-orange-500 transition">
+                          {product.name}
+                        </p>
+                        <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                          {product.trend || "+12%"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mb-2">
+                        <p className="text-xs text-gray-400">{product.sales || 0} units sold</p>
+                        <p className="text-sm font-semibold text-gray-800">
+                          {typeof product.revenue === 'number' ? formatCurrency(product.revenue) : product.revenue}
+                        </p>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-1.5">
+                        <div 
+                          className="bg-gradient-to-r from-orange-500 to-pink-500 h-1.5 rounded-full"
+                          style={{ width: `${((product.sales || 30) / 50) * 100}%` }}
+                        ></div>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center mb-2">
-                      <p className="text-xs text-gray-400">{product.sales || 0} units sold</p>
-                      <p className="text-sm font-semibold text-gray-800">
-                        {typeof product.revenue === 'number' ? formatCurrency(product.revenue) : product.revenue}
-                      </p>
-                    </div>
-                    <div className="w-full bg-gray-100 rounded-full h-1.5">
-                      <div 
-                        className="bg-gradient-to-r from-orange-500 to-pink-500 h-1.5 rounded-full"
-                        style={{ width: `${((product.sales || 30) / 50) * 100}%` }}
-                      ></div>
-                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-400">
+                    No products data available
                   </div>
-                ))}
+                )}
               </div>
 
               <button className="mt-6 w-full py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 hover:border-orange-300 transition flex items-center justify-center gap-2">

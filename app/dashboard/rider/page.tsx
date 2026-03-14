@@ -17,6 +17,9 @@ export default function RiderDashboard() {
   const [deliveries, setDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // ✅ ADD API_URL constant
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
   useEffect(() => {
     const fetchData = async () => {
       const userData = localStorage.getItem('user');
@@ -30,13 +33,18 @@ export default function RiderDashboard() {
         const parsed = JSON.parse(userData);
         setRider(parsed);
 
-        // Fetch real data from backend
+        // Fetch real data from backend - using API_URL
         const response = await fetch(`${API_URL}/api/dashboard/rider/${parsed.email}`);
         const data = await response.json();
 
         if (data.success) {
-          setStats(data.stats);
-          setDeliveries(data.deliveries);
+          setStats(data.stats || {
+            totalDeliveries: 0,
+            completed: 0,
+            inTransit: 0,
+            pending: 0
+          });
+          setDeliveries(data.deliveries || []);
         }
       } catch (error) {
         console.error("Error:", error);
@@ -46,7 +54,7 @@ export default function RiderDashboard() {
     };
 
     fetchData();
-  }, [router]);
+  }, [router, API_URL]);
 
   const handleLogout = () => {
     localStorage.removeItem('user');
@@ -237,28 +245,36 @@ export default function RiderDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {deliveries.map((delivery: any, index: number) => (
-                  <tr key={index} className="border-b border-gray-50 hover:bg-gray-50/50 transition">
-                    <td className="py-4 text-sm font-medium text-gray-800">{delivery.customer}</td>
-                    <td className="py-4 text-sm text-gray-600">{delivery.address}</td>
-                    <td className="py-4 text-sm text-gray-600">{delivery.time}</td>
-                    <td className="py-4">
-                      <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
-                        delivery.status === 'delivered' ? 'bg-green-100 text-green-700' :
-                        delivery.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-blue-100 text-blue-700'
-                      }`}>
-                        {getStatusIcon(delivery.status)}
-                        {delivery.status}
-                      </span>
-                    </td>
-                    <td className="py-4">
-                      <button className="text-orange-500 hover:text-orange-600 transition">
-                        View Details
-                      </button>
+                {deliveries.length > 0 ? (
+                  deliveries.map((delivery: any, index: number) => (
+                    <tr key={index} className="border-b border-gray-50 hover:bg-gray-50/50 transition">
+                      <td className="py-4 text-sm font-medium text-gray-800">{delivery.customer}</td>
+                      <td className="py-4 text-sm text-gray-600">{delivery.address}</td>
+                      <td className="py-4 text-sm text-gray-600">{delivery.time}</td>
+                      <td className="py-4">
+                        <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
+                          delivery.status === 'delivered' ? 'bg-green-100 text-green-700' :
+                          delivery.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-blue-100 text-blue-700'
+                        }`}>
+                          {getStatusIcon(delivery.status)}
+                          {delivery.status}
+                        </span>
+                      </td>
+                      <td className="py-4">
+                        <button className="text-orange-500 hover:text-orange-600 transition">
+                          View Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-gray-400">
+                      No deliveries found for today
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>

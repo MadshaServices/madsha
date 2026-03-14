@@ -14,6 +14,9 @@ export default function UserDashboard() {
   })
   const [loading, setLoading] = useState(true)
 
+  // ✅ ADD API_URL constant
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
   // Logout function
   const handleLogout = () => {
     localStorage.removeItem('user')
@@ -38,7 +41,7 @@ export default function UserDashboard() {
           setUser(JSON.parse(storedUser))
         }
 
-        // Backend se profile fetch kar
+        // Backend se profile fetch kar - using API_URL
         const response = await fetch(`${API_URL}/api/user/profile?email=${userEmail}`);
         const data = await response.json()
 
@@ -54,12 +57,15 @@ export default function UserDashboard() {
     }
 
     fetchUserData()
-  }, [router])
+  }, [router, API_URL])
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-pink-50">
+        <div className="relative">
+          <div className="w-20 h-20 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin"></div>
+          <p className="mt-4 text-gray-600 font-medium">Loading dashboard...</p>
+        </div>
       </div>
     )
   }
@@ -77,7 +83,7 @@ export default function UserDashboard() {
           <div className="mb-6 p-3 bg-orange-50 rounded-lg">
             <p className="font-semibold">{user.name}</p>
             <p className="text-sm text-gray-600">{user.email}</p>
-            <p className="text-sm text-gray-600">{user.phone}</p>
+            <p className="text-sm text-gray-600">{user.phone || 'No phone'}</p>
           </div>
         )}
 
@@ -149,48 +155,50 @@ export default function UserDashboard() {
             Recent Orders
           </h2>
           
-          <table className="w-full">
-            <thead>
-              <tr className="text-left border-b">
-                <th className="py-2">Product</th>
-                <th>Status</th>
-                <th>Price</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b">
-                <td className="py-3">Smart Watch</td>
-                <td className="text-green-600">Delivered</td>
-                <td>₹1,999</td>
-                <td>
-                  <button className="text-blue-500 hover:underline">
-                    View
-                  </button>
-                </td>
-              </tr>
-              <tr className="border-b">
-                <td className="py-3">Shoes</td>
-                <td className="text-yellow-600">Shipped</td>
-                <td>₹1,299</td>
-                <td>
-                  <button className="text-blue-500 hover:underline">
-                    View
-                  </button>
-                </td>
-              </tr>
-              <tr>
-                <td className="py-3">Headphones</td>
-                <td className="text-blue-600">Processing</td>
-                <td>₹899</td>
-                <td>
-                  <button className="text-blue-500 hover:underline">
-                    View
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left border-b">
+                  <th className="py-2">Product</th>
+                  <th className="py-2">Status</th>
+                  <th className="py-2">Price</th>
+                  <th className="py-2">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b">
+                  <td className="py-3">Smart Watch</td>
+                  <td className="text-green-600">Delivered</td>
+                  <td>₹1,999</td>
+                  <td>
+                    <button className="text-blue-500 hover:underline">
+                      View
+                    </button>
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-3">Shoes</td>
+                  <td className="text-yellow-600">Shipped</td>
+                  <td>₹1,299</td>
+                  <td>
+                    <button className="text-blue-500 hover:underline">
+                      View
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-3">Headphones</td>
+                  <td className="text-blue-600">Processing</td>
+                  <td>₹899</td>
+                  <td>
+                    <button className="text-blue-500 hover:underline">
+                      View
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
